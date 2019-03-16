@@ -19,8 +19,6 @@ func (c Context) Get(x string) interface{} {
 	}
 }
 
-type Function func([]interface{}) interface{}
-
 func Interpret(ast AST) {
 	var l *list.List
 	l = ast
@@ -63,7 +61,7 @@ func interpretList(ast AST, ctx *Context) interface{} {
 	for el := l.Front(); el != nil; el = el.Next() {
 		evaluatedList.PushBack(interpret(el.Value, ctx))
 	}
-	if f, ok := evaluatedList.Front().Value.(Function); ok {
+	if f, ok := evaluatedList.Front().Value.(func([]interface{}) interface{}); ok {
 		var args []interface{}
 		for el := evaluatedList.Front().Next(); el != nil; el = el.Next() {
 			args = append(args, el)
