@@ -90,11 +90,10 @@ func walkAndPrintTree(indent int, ast AST) {
 		spacing += "  "
 	}
 	for el := l.Front(); el != nil; el = el.Next() {
-		// First check if list
 		if listElem, ok := el.Value.(ListElem); ok {
-			fmt.Printf("(\n")
+			fmt.Printf("%s(\n", spacing)
 			walkAndPrintTree(indent+1, listElem.subTree)
-			fmt.Printf(")\n")
+			fmt.Printf("%s)\n", spacing)
 		} else if numElem, ok := el.Value.(NumberElem); ok {
 			fmt.Printf("%s[Number: %f]\n", spacing, numElem.val)
 		} else if stringElem, ok := el.Value.(StringElem); ok {
