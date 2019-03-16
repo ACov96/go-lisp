@@ -17,6 +17,7 @@ const (
 	NUMBER int = 2
 	STRING int = 3
 	ID     int = 4
+        LIST   int = 5
 )
 
 type Token struct {
@@ -53,18 +54,5 @@ func LexFile(file string) []Token {
 	lex := NewLexer(f)
 	txt := func () string { return lex.Text() }
 	NN_FUN(lex)
-        fmt.Println(tokens)
-	// lparenR := regexp.MustCompile(`\(`)
-	// rparenR := regexp.MustCompile(`\)`)
-	// numberR := regexp.MustCompile(`[0-9](+\.[0-9]*)?`)
-	// identifierR := regexp.MustCompile(`[a-zA-Z][a-zA-Z0-9]*`)
-
-	// rawByteInput, err := ioutil.ReadFile(file)
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "Unable to open %s", file)
-	// }
-	// rawInput := string(rawByteInput)
-
-	
-	return nil
+	return tokens
 }

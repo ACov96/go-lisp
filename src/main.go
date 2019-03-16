@@ -4,5 +4,7 @@ import "os"
 
 func main() {
 	args := os.Args[1:]
-	LexFile(args[0])
+	tokens := LexFile(args[0])
+	ast := Parser(tokens)
+	PrintAST(ast)
 }
