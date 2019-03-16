@@ -1,0 +1,70 @@
+/\(/{ tokens = append(tokens, Token{LPAREN, "("}) }
+/\)/{ tokens = append(tokens, Token{RPAREN, ")"}) }
+/[0-9]+(\.[0-9]+)*/{ tokens = append(tokens, Token{NUMBER, txt()}) }
+/[a-zA-Z][a-zA-Z0-9]*/{ tokens = append(tokens, Token{ID, txt()}) }
+/\"(\\.|[^"\\])*\"/{ tokens = append(tokens, Token{STRING, txt()}) }
+/[\t\n]+/{ /* eat whitespace */ }
+/./{ println("Unrecognized character", txt()) }
+//
+package main
+
+import "fmt"
+import "os"
+
+const (
+	LPAREN int = 0
+	RPAREN int = 1
+	NUMBER int = 2
+	STRING int = 3
+	ID     int = 4
+)
+
+type Token struct {
+	token int
+	val string
+}
+
+func (t Token) String() string {
+    var token string
+    switch t.token {
+    case LPAREN:
+        token = "LPAREN"
+    case RPAREN:
+        token = "RPAREN"
+    case NUMBER:
+        token = "NUMBER"
+    case STRING:
+        token = "STRING"
+    case ID:
+        token = "ID"
+    default:
+        token = "UNKNOWN"
+    }
+    return fmt.Sprintf("<%s: %s>", token, t.val)
+}
+
+
+func LexFile(file string) []Token {
+	var tokens []Token 
+	f, err := os.Open(file)
+	if err != nil {
+		os.Exit(1)
+	}
+	lex := NewLexer(f)
+	txt := func () string { return lex.Text() }
+	NN_FUN(lex)
+        fmt.Println(tokens)
+	// lparenR := regexp.MustCompile(`\(`)
+	// rparenR := regexp.MustCompile(`\)`)
+	// numberR := regexp.MustCompile(`[0-9](+\.[0-9]*)?`)
+	// identifierR := regexp.MustCompile(`[a-zA-Z][a-zA-Z0-9]*`)
+
+	// rawByteInput, err := ioutil.ReadFile(file)
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "Unable to open %s", file)
+	// }
+	// rawInput := string(rawByteInput)
+
+	
+	return nil
+}
