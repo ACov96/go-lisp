@@ -3,7 +3,7 @@
 /[0-9]+(\.[0-9]+)*/{ tokens = append(tokens, Token{NUMBER, txt()}) }
 /[a-zA-Z][a-zA-Z0-9]*/{ tokens = append(tokens, Token{ID, txt()}) }
 /\"(\\.|[^"\\])*\"/{ tokens = append(tokens, Token{STRING, txt()}) }
-/[\t\n]+/{ /* eat whitespace */ }
+/[ \t\n]+/{ /* eat whitespace */ }
 /./{ println("Unrecognized character", txt()) }
 //
 package main
