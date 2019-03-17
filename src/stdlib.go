@@ -26,13 +26,8 @@ func Init() {
 					} else if boolean, isBoolean := temp.(BoolElem); isBoolean {
 						fmt.Printf("%t", boolean.val)
 					} else {
-						id, ok := temp.(IdentifierElem)
-						fmt.Println(id.val)
-						if !ok {
-							fmt.Println("Unrecognized element in context")
-							os.Exit(1)
-						}
-						temp = ctx.Get(id.val)
+						fmt.Println("Unrecognized element in context")
+						os.Exit(1)
 					}	
 				} else {
 					fmt.Printf("Unable to resolve interface: %v\n", intf)
