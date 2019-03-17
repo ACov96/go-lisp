@@ -61,12 +61,12 @@ func interpretList(ast AST, ctx *Context) interface{} {
 	for el := l.Front(); el != nil; el = el.Next() {
 		evaluatedList.PushBack(interpret(el.Value, ctx))
 	}
-	if f, ok := evaluatedList.Front().Value.(func([]interface{}) interface{}); ok {
+	if f, ok := evaluatedList.Front().Value.(func([]interface{}, *Context) interface{}); ok {
 		var args []interface{}
 		for el := evaluatedList.Front().Next(); el != nil; el = el.Next() {
 			args = append(args, el)
 		}
-		return f(args)
+		return f(args, ctx)
 	} else {
 		return ListElem{BaseElem{LIST}, AST(evaluatedList)}
 	}

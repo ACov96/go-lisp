@@ -5,23 +5,24 @@ import "os"
 import "container/list"
 
 var StandardLibrary map[string]interface{} = map[string]interface{}{
-	"print": func(args []interface{}) interface{} {
-		for idx, intf := range args {
+	"print": func(args []interface{}, ctx *Context) interface{} {
+		for _, intf := range args {
 			var el *list.Element
 			el = intf.(*list.Element)
 			if val, ok := el.Value.(string); ok {
-				fmt.Printf(val)
+				fmt.Printf("%s", val)
 			} else if val, ok := el.Value.(float64); ok {
-				fmt.Printf("%d", val)
+				fmt.Printf("%f", val)
+			} else if val, ok := el.Value.(bool); ok {
+				fmt.Printf("%t", val)
 			} else {
 				fmt.Printf("Unable to resolve interface: %v\n", el.Value.(StringElem))
 				os.Exit(1)
 			}
-			if idx != len(args) {
-				fmt.Printf(" ")
-			}
-			fmt.Printf("\n")
 		} 
+		fmt.Printf("\n")
 		return nil
 	},
+	"T": true,
+	"F": false,
 }
