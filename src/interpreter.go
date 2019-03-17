@@ -56,18 +56,32 @@ func interpret(input interface{}, ctx *Context) interface{} {
 
 func interpretList(ast AST, ctx *Context) interface{} {
 	var l *list.List
+	var isIdentifier, isSpecial bool = false, false
+	var special interface{}
+	var args []interface{}
 	l = ast
-	evaluatedList := list.New()
-	for el := l.Front(); el != nil; el = el.Next() {
-		evaluatedList.PushBack(interpret(el.Value, ctx))
+	first, isIdentifier := l.Front().Value.(IdentifierElem)
+	if isIdentifier {
+		special, isSpecial = Special[first.val]
 	}
-	if f, ok := evaluatedList.Front().Value.(func([]interface{}, *Context) interface{}); ok {
-		var args []interface{}
-		for el := evaluatedList.Front().Next(); el != nil; el = el.Next() {
-			args = append(args, el)
+	if isSpecial && l.Len() > 0 {
+		for el := l.Front().Next(); el != nil; el = el.Next() {
+			args = append(args, el.Value)
 		}
-		return f(args, ctx)
+		return special.(func([]interface{}, *Context) interface{})(args, ctx)
 	} else {
-		return ListElem{BaseElem{LIST}, AST(evaluatedList)}
+		evaluatedList := list.New()
+		for el := l.Front(); el != nil; el = el.Next() {
+			evaluatedList.PushBack(interpret(el.Value, ctx))
+		}
+		if f, ok := evaluatedList.Front().Value.(func([]interface{}, *Context) interface{}); ok {
+			for el := evaluatedList.Front().Next(); el != nil; el = el.Next() {
+				args = append(args, el.Value)
+			}
+			return f(args, ctx)
+		} else {
+			return ListElem{BaseElem{LIST}, AST(evaluatedList)}
+		}	
 	}
+	
 }
