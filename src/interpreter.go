@@ -20,6 +20,7 @@ func (c Context) Get(x string) interface{} {
 }
 
 func Interpret(ast AST) {
+	Init()
 	var l *list.List
 	l = ast
 	for el := l.Front(); el != nil; el = el.Next() {
