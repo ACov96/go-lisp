@@ -31,6 +31,11 @@ type ListElem struct {
 	subTree AST
 }
 
+type BoolElem struct {
+	BaseElem
+	val bool
+}
+
 func Parser(tokens []Token) AST {
 	tokenList := list.New()
 	for _, token := range(tokens) {
@@ -71,6 +76,13 @@ func parenthesize(tokens *list.List, tree *list.List) *list.List {
 				os.Exit(1)
 			}
 			tree.PushBack(NumberElem{BaseElem{NUMBER}, f})
+		case BOOL:
+			f, err := strconv.ParseBool(currToken.val)
+			if err != nil {
+				fmt.Println("Unable to convert boolean")
+				os.Exit(1)
+			}
+			tree.PushBack(BoolElem{BaseElem{BOOL}, f})
 		default:
 			tree.PushBack(IdentifierElem{BaseElem{ID}, currToken.val})
 		}
@@ -98,6 +110,8 @@ func walkAndPrintTree(indent int, ast AST) {
 			fmt.Printf("%s[Number: %f]\n", spacing, numElem.val)
 		} else if stringElem, ok := el.Value.(StringElem); ok {
 			fmt.Printf("%s[String: \"%s\"]\n", spacing, stringElem.val)
+		} else if boolElem, ok := el.Value.(BoolElem); ok {
+			fmt.Printf("%s[Boolean: %s]\n", spacing, boolElem.val)
 		} else {
 			idElem := el.Value.(IdentifierElem)
 			fmt.Printf("%s[Identifier: %s]\n", spacing, idElem.val)

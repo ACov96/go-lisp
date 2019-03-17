@@ -7,8 +7,6 @@ import "container/list"
 var StandardLibrary, Special map[string]interface{}
 func Init() {
 	StandardLibrary = map[string]interface{}{
-		"true": true,
-		"false": false,
 	}
 	Special = map[string]interface{}{
 		"print": func(args []interface{}, ctx *Context) interface{} {
@@ -17,21 +15,25 @@ func Init() {
 					fmt.Printf("%s", val.val)
 				} else if val, ok := intf.(NumberElem); ok {
 					fmt.Printf("%f", val.val)
+				} else if val, ok := intf.(BoolElem); ok {
+					fmt.Printf("%t", val.val)
 				} else if val, ok := intf.(IdentifierElem); ok {
-					if (val.val == "true" || val.val == "false") {
-						fmt.Printf("%t", StandardLibrary[val.val].(bool))
+					temp := ctx.Get(val.val)
+					if str, isString := temp.(StringElem); isString {
+						fmt.Printf("%s", str.val)
+					} else if number, isNumber := temp.(NumberElem); isNumber {
+						fmt.Printf("%f", number.val)
+					} else if boolean, isBoolean := temp.(BoolElem); isBoolean {
+						fmt.Printf("%t", boolean.val)
 					} else {
-						temp := ctx.Get(val.val)
-						if str, isString := temp.(StringElem); isString {
-							fmt.Printf("%s", str.val)
-						} else if number, isNumber := temp.(NumberElem); isNumber {
-							fmt.Printf("%f", number.val)
-						} else if b, isBoolean := temp.(bool); isBoolean {
-							fmt.Printf("%t", b)
-						} else {
-							fmt.Println("Can't find value")
+						id, ok := temp.(IdentifierElem)
+						fmt.Println(id.val)
+						if !ok {
+							fmt.Println("Unrecognized element in context")
+							os.Exit(1)
 						}
-					}
+						temp = ctx.Get(id.val)
+					}	
 				} else {
 					fmt.Printf("Unable to resolve interface: %v\n", intf)
 					os.Exit(1)

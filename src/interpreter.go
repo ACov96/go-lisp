@@ -44,6 +44,8 @@ func interpret(input interface{}, ctx *Context) interface{} {
 		}
 	} else if el, ok := input.(NumberElem); ok {
 		return el.val
+	} else if el, ok := input.(BoolElem); ok {
+		return el.val
 	} else {
 		el, ok := input.(StringElem)
 		if !ok {
