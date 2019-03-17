@@ -6,8 +6,7 @@ import "container/list"
 
 var StandardLibrary, Special map[string]interface{}
 func Init() {
-	StandardLibrary = map[string]interface{}{
-	}
+	StandardLibrary = map[string]interface{}{}
 	Special = map[string]interface{}{
 		"print": func(args []interface{}, ctx *Context) interface{} {
 			for _, intf := range args {
@@ -57,7 +56,11 @@ func Init() {
 					os.Exit(1)
 				}
 				val := tuple.Front().Next().Value
-				letContext.scope[id.val] = val
+				if alias, ok := val.(IdentifierElem); ok {
+					letContext.scope[id.val] = ctx.Get(alias.val)
+				} else {
+					letContext.scope[id.val] = val
+				}
 			}
 			for _, el := range args[1:] {
 				interpret(el, &letContext)
