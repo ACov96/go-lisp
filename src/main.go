@@ -6,5 +6,6 @@ func main() {
 	args := os.Args[1:]
 	tokens := LexFile(args[0])
 	ast := Parser(tokens)
-	Interpret(ast)
+	PrintAST(ast)
+	//Interpret(ast)
 }
