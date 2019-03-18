@@ -59,7 +59,7 @@ func Init() {
 				if alias, ok := val.(IdentifierElem); ok {
 					letContext.scope[id.val] = ctx.Get(alias.val)
 				} else {
-					letContext.scope[id.val] = val
+					letContext.scope[id.val] = interpret(val, &letContext)
 				}
 			}
 			for _, el := range args[1:] {
@@ -67,7 +67,12 @@ func Init() {
 			}
 			return nil
 		},
-
+		"lambda": func(args []interface{}, ctx *Context) interface{} {
+			
+			return func(callArgs []interface{}, lambdaContext *Context) interface{} {
+				
+			}
+		},
 	}
 
 }
