@@ -110,6 +110,23 @@ func printList(list []Element, ctx *Context) {
 	fmt.Printf(")")
 }
 
+func printInterfaceList(list []interface{}) {
+	fmt.Printf("(")
+	for idx, el := range list {
+		if val, ok := el.(string); ok {
+			fmt.Printf("%s", val)
+		} else if val, ok := el.(float64); ok {
+			fmt.Printf("%g", val)
+		} else {
+			fmt.Printf("%t", el.(bool))
+		}
+		if idx != len(list)-1 {
+			fmt.Printf(" ")
+		}
+	}
+	fmt.Printf(")\n")
+}
+
 func Init() {
 	StandardLibrary = map[string]interface{}{}
 	Special = map[string]interface{}{
@@ -118,6 +135,11 @@ func Init() {
 				tmp := el.val
 				if el.kind == "identifier" {
 					tmp = ctx.Get(el.val.(string))
+					// This check is needed in case a list has already been evaluated
+					if list, ok := tmp.([]interface{}); ok {
+						printInterfaceList(list)
+						continue
+					}
 				} else if el.kind == "list" {
 					printList(el.val.([]Element), ctx)
 					continue
