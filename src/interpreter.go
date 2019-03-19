@@ -195,5 +195,12 @@ func Init() {
 				return interpret(args[1], &lambdaContext)
 			}
 		},
+		"if": func(args []Element, ctx *Context) interface{} {
+			if interpret(args[0], ctx).(bool) {
+				return interpret(args[1], ctx)
+			} else {
+				return interpret(args[2], ctx)
+			}
+		},
 	}
 }
