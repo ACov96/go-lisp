@@ -18,6 +18,8 @@ func (c Context) Get(x string) interface{} {
 	}
 }
 
+var StandardLibrary, Special map[string]interface{}
+
 func Interpret(ast AST) {
 	Init()
 	var l []Element
@@ -78,4 +80,59 @@ func interpretList(l []Element, ctx *Context) interface{} {
 		}	
 	}
 	
+}
+
+func printList(list []Element, ctx *Context) {
+	fmt.Printf("(")
+	for idx, el := range list {
+		var tmp interface{}
+		if el.kind == "list" {
+			printList(el.val.([]Element), ctx)
+		} else if el.kind == "identifier" {
+			tmp = ctx.Get(el.val.(string))
+		} else {
+			tmp = el.val
+		}
+
+		if val, ok := tmp.(string); ok {
+			fmt.Printf("%s", val)
+		} else if val, ok := tmp.(float64); ok {
+			fmt.Printf("%g", val)
+		} else if val, ok := tmp.(bool); ok {
+			fmt.Printf("%t", val)
+		}
+		if idx != len(list)-1 {
+			fmt.Printf(" ")
+		}
+	}
+	fmt.Printf(")")
+}
+
+func Init() {
+	StandardLibrary = map[string]interface{}{}
+	Special = map[string]interface{}{
+		"print": func(args []Element, ctx *Context) interface{} {
+			for _, el := range args {
+				tmp := el.val
+				if el.kind == "identifier" {
+					tmp = ctx.Get(el.val.(string))
+				} else if el.kind == "list" {
+					printList(el.val.([]Element), ctx)
+					continue
+				}
+				if val, ok := tmp.(string); ok {
+					fmt.Printf("%s", val)
+				} else if val, ok := tmp.(float64); ok {
+					fmt.Printf("%g", val)
+				} else if val, ok := tmp.(bool); ok {
+					fmt.Printf("%t", val);
+				} else {
+					fmt.Println("Unknown value")
+					os.Exit(1)
+				}
+			} 
+			fmt.Printf("\n")
+			return nil
+		},
+	}
 }
