@@ -133,7 +133,14 @@ func printInterfaceList(list []interface{}) {
 }
 
 func Init() {
-	StandardLibrary = map[string]interface{}{}
+	StandardLibrary = map[string]interface{}{
+		"-": func(args []interface{}, ctx *Context) interface{} {
+			return args[0].(float64) - args[1].(float64)
+		},
+		"+": func(args []interface{}, ctx *Context) interface{} {
+			return args[0].(float64) + args[1].(float64)
+		},
+	}
 	Special = map[string]interface{}{
 		"print": func(args []Element, ctx *Context) interface{} {
 			for _, el := range args {
