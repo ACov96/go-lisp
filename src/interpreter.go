@@ -2,7 +2,6 @@ package main
 
 import "fmt"
 import "os"
-import "container/list"
 
 type Context struct {
 	scope map[string]interface{}
@@ -19,12 +18,14 @@ func (c Context) Get(x string) interface{} {
 	}
 }
 
+var StandardLibrary, Special map[string]interface{}
+
 func Interpret(ast AST) {
 	Init()
-	var l *list.List
+	var l []Element
 	l = ast
-	for el := l.Front(); el != nil; el = el.Next() {
-		interpret(el.Value, nil)
+	for _, el := range l {
+		interpret(el, nil)
 	}
 }
 
@@ -32,59 +33,149 @@ func interpret(input interface{}, ctx *Context) interface{} {
 	if ctx == nil {
 		newContext := Context{StandardLibrary, nil}
 		return interpret(input, &newContext)
-	} else if el, ok := input.(ListElem); ok {
-		return interpretList(el.subTree, ctx)
-	} else if el, ok := input.(IdentifierElem); ok {
-		val := ctx.Get(el.val)
+	} else if el, ok := input.(Element); ok && el.kind == "list" {
+		return interpretList(el.val.([]Element), ctx)
+	} else if el, ok := input.(Element); ok && el.kind == "identifier" {
+		val := ctx.Get(el.val.(string))
 		if val != nil {
 			return val
 		} else {
-			fmt.Printf("Cannot find identifier: %s", el.val)
+			fmt.Printf("Cannot find identifier: %s", el)
 			os.Exit(1)
 		}
-	} else if el, ok := input.(NumberElem); ok {
+	} else if el, ok := input.(Element); ok && el.kind == "literal" {
 		return el.val
-	} else if el, ok := input.(BoolElem); ok {
-		return el.val
+	} else if el, ok := input.(float64); ok {
+		return el
+	} else if el, ok := input.(bool); ok {
+		return el
 	} else {
-		el, ok := input.(StringElem)
+		el, ok := input.(string)
 		if !ok {
 			fmt.Println("Unable to resolve value")
 			os.Exit(1)
 		}
-		return el.val
+		return el
 	}
 	return nil
 }
 
-func interpretList(ast AST, ctx *Context) interface{} {
-	var l *list.List
-	var isIdentifier, isSpecial bool = false, false
-	var special interface{}
+func interpretList(l []Element, ctx *Context) interface{} {
 	var args []interface{}
-	l = ast
-	first, isIdentifier := l.Front().Value.(IdentifierElem)
-	if isIdentifier {
-		special, isSpecial = Special[first.val]
+	var isSpecial bool = false
+	var special interface{}
+	if l[0].kind == "identifier" {
+		special, isSpecial = Special[l[0].val.(string)]
 	}
-	if isSpecial && l.Len() > 0 {
-		for el := l.Front().Next(); el != nil; el = el.Next() {
-			args = append(args, el.Value)
-		}
-		return special.(func([]interface{}, *Context) interface{})(args, ctx)
+	if isSpecial && len(l) > 0 {
+		return special.(func([]Element, *Context) interface{})(l[1:], ctx)
 	} else {
-		evaluatedList := list.New()
-		for el := l.Front(); el != nil; el = el.Next() {
-			evaluatedList.PushBack(interpret(el.Value, ctx))
+		var evaluatedList []interface{}
+		for _, el := range l {
+			evaluatedList = append(evaluatedList, interpret(el, ctx))
 		}
-		if f, ok := evaluatedList.Front().Value.(func([]interface{}, *Context) interface{}); ok {
-			for el := evaluatedList.Front().Next(); el != nil; el = el.Next() {
-				args = append(args, el.Value)
-			}
+		if f, ok := evaluatedList[0].(func([]interface{}, *Context) interface{}); ok {
+			args = evaluatedList[1:]
 			return f(args, ctx)
 		} else {
-			return ListElem{BaseElem{LIST}, AST(evaluatedList)}
+			return evaluatedList
 		}	
 	}
 	
+}
+
+func printList(list []Element, ctx *Context) {
+	fmt.Printf("(")
+	for idx, el := range list {
+		var tmp interface{}
+		if el.kind == "list" {
+			printList(el.val.([]Element), ctx)
+		} else if el.kind == "identifier" {
+			tmp = ctx.Get(el.val.(string))
+		} else {
+			tmp = el.val
+		}
+
+		if val, ok := tmp.(string); ok {
+			fmt.Printf("%s", val)
+		} else if val, ok := tmp.(float64); ok {
+			fmt.Printf("%g", val)
+		} else if val, ok := tmp.(bool); ok {
+			fmt.Printf("%t", val)
+		}
+		if idx != len(list)-1 {
+			fmt.Printf(" ")
+		}
+	}
+	fmt.Printf(")")
+}
+
+func printInterfaceList(list []interface{}) {
+	fmt.Printf("(")
+	for idx, el := range list {
+		if val, ok := el.(string); ok {
+			fmt.Printf("%s", val)
+		} else if val, ok := el.(float64); ok {
+			fmt.Printf("%g", val)
+		} else {
+			fmt.Printf("%t", el.(bool))
+		}
+		if idx != len(list)-1 {
+			fmt.Printf(" ")
+		}
+	}
+	fmt.Printf(")\n")
+}
+
+func Init() {
+	StandardLibrary = map[string]interface{}{}
+	Special = map[string]interface{}{
+		"print": func(args []Element, ctx *Context) interface{} {
+			for _, el := range args {
+				tmp := el.val
+				if el.kind == "identifier" {
+					tmp = ctx.Get(el.val.(string))
+					// This check is needed in case a list has already been evaluated
+					if list, ok := tmp.([]interface{}); ok {
+						printInterfaceList(list)
+						continue
+					}
+				} else if el.kind == "list" {
+					printList(el.val.([]Element), ctx)
+					continue
+				}
+				if val, ok := tmp.(string); ok {
+					fmt.Printf("%s", val)
+				} else if val, ok := tmp.(float64); ok {
+					fmt.Printf("%g", val)
+				} else if val, ok := tmp.(bool); ok {
+					fmt.Printf("%t", val);
+				} else {
+					fmt.Println("Unknown value")
+					os.Exit(1)
+				}
+			} 
+			fmt.Printf("\n")
+			return nil
+		},
+		"let": func(args []Element, ctx *Context) interface{} {
+			tuples := args[0]
+			if tuples.kind != "list" {
+				fmt.Println("First argument to let is not a list of tuples")
+				os.Exit(1)
+			}
+			newContext := Context{make(map[string]interface{}), ctx}
+			for _, tuple := range tuples.val.([]Element) {
+				left := tuple.val.([]Element)[0]
+				right := tuple.val.([]Element)[1]
+				if left.kind != "identifier" {
+					fmt.Println("Left side of tuple is not identifier")
+					os.Exit(1)
+				}
+				id := left.val.(string)
+				newContext.scope[id] = interpret(right, ctx)
+			}
+			return interpret(args[1], &newContext)
+		},
+	}
 }

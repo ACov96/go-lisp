@@ -5,36 +5,12 @@ import "fmt"
 import "strconv"
 import "os"
 
-type AST *list.List
-
-type BaseElem struct {
-	elemType int
+type Element struct {
+	kind string
+	val interface{}
 }
+type AST []Element
 
-type IdentifierElem struct {
-	BaseElem
-	val string
-}
-
-type StringElem struct {
-	BaseElem
-	val string
-}
-
-type NumberElem struct {
-	BaseElem
-	val float64
-}
-
-type ListElem struct {
-	BaseElem
-	subTree AST
-}
-
-type BoolElem struct {
-	BaseElem
-	val bool
-}
 
 func Parser(tokens []Token) AST {
 	tokenList := list.New()
@@ -42,7 +18,7 @@ func Parser(tokens []Token) AST {
 		tokenList.PushBack(token)
 	}
 	l := parenthesize(tokenList, list.New())
-	return AST(l)
+	return AST(makeListArray(l))
 }
 
 func parenthesize(tokens *list.List, tree *list.List) *list.List {
@@ -57,8 +33,8 @@ func parenthesize(tokens *list.List, tree *list.List) *list.List {
 	}
 	if currToken.val == "(" {
 		// Starting a new list
-		subList := ListElem{BaseElem{LIST}, parenthesize(tokens, list.New())}
-		tree.PushBack(subList)
+		subList := parenthesize(tokens, list.New())
+		tree.PushBack(Element{"list", subList})
 		return parenthesize(tokens, tree)
 	} else if currToken.val == ")" {
 		// Ending the current list
@@ -67,27 +43,38 @@ func parenthesize(tokens *list.List, tree *list.List) *list.List {
 		// We have some value in a list
 		switch currToken.token {
 		case STRING:
-			
-			tree.PushBack(StringElem{BaseElem{STRING}, currToken.val[1:len(currToken.val)-1]})
+			tree.PushBack(Element{"literal", currToken.val[1:len(currToken.val)-1]})
 		case NUMBER:
 			f, err := strconv.ParseFloat(currToken.val, 64)
 			if err != nil {
 				fmt.Println("Unable to convert number")
 				os.Exit(1)
 			}
-			tree.PushBack(NumberElem{BaseElem{NUMBER}, f})
+			tree.PushBack(Element{"literal", f})
 		case BOOL:
-			f, err := strconv.ParseBool(currToken.val)
+			b, err := strconv.ParseBool(currToken.val)
 			if err != nil {
 				fmt.Println("Unable to convert boolean")
 				os.Exit(1)
 			}
-			tree.PushBack(BoolElem{BaseElem{BOOL}, f})
+			tree.PushBack(Element{"literal", b})
 		default:
-			tree.PushBack(IdentifierElem{BaseElem{ID}, currToken.val})
+			tree.PushBack(Element{"identifier", currToken.val})
 		}
 		return parenthesize(tokens, tree)
 	}
+}
+
+func makeListArray(l *list.List) []Element {
+	var arr []Element
+	for el := l.Front(); el != nil; el = el.Next() {
+		if elType := el.Value.(Element); elType.kind == "list" {
+			arr = append(arr, Element{"list", makeListArray(elType.val.(*list.List))})
+		} else {
+			arr = append(arr, el.Value.(Element))
+		}
+	}
+	return arr
 }
 
 func PrintAST(ast AST) {
@@ -95,26 +82,27 @@ func PrintAST(ast AST) {
 }
 
 func walkAndPrintTree(indent int, ast AST) {
-	var l *list.List
+	var l []Element
 	l = ast
 	spacing := ""
 	for i := 0; i < indent; i++ {
 		spacing += "  "
 	}
-	for el := l.Front(); el != nil; el = el.Next() {
-		if listElem, ok := el.Value.(ListElem); ok {
+	for _, el := range l {
+		if el.kind == "list" {
 			fmt.Printf("%s(\n", spacing)
-			walkAndPrintTree(indent+1, listElem.subTree)
+			walkAndPrintTree(indent+1, el.val.([]Element))
 			fmt.Printf("%s)\n", spacing)
-		} else if numElem, ok := el.Value.(NumberElem); ok {
-			fmt.Printf("%s[Number: %f]\n", spacing, numElem.val)
-		} else if stringElem, ok := el.Value.(StringElem); ok {
-			fmt.Printf("%s[String: \"%s\"]\n", spacing, stringElem.val)
-		} else if boolElem, ok := el.Value.(BoolElem); ok {
-			fmt.Printf("%s[Boolean: %s]\n", spacing, boolElem.val)
+		} else if el.kind == "identifier" {
+			fmt.Printf("%s[Identifier: %s]\n", spacing, el.val.(string))
+		} else if val, ok := el.val.(float64); ok {
+			fmt.Printf("%s[Number: %f]\n", spacing, val)
+		} else if val, ok := el.val.(bool); ok {
+			fmt.Printf("%s[Boolean: %t]\n", spacing, val)
+		} else if val, ok := el.val.(string); ok {
+			fmt.Printf("%s[String: \"%s\"]\n", spacing, val)
 		} else {
-			idElem := el.Value.(IdentifierElem)
-			fmt.Printf("%s[Identifier: %s]\n", spacing, idElem.val)
+			fmt.Printf("Unknown\n")
 		}
 	}
 }
