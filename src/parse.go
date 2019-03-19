@@ -5,8 +5,12 @@ import "fmt"
 import "strconv"
 import "os"
 
-type AST []interface{}
-type Identifier string
+type Element struct {
+	kind string
+	val interface{}
+}
+type AST []Element
+
 
 func Parser(tokens []Token) AST {
 	tokenList := list.New()
@@ -30,7 +34,7 @@ func parenthesize(tokens *list.List, tree *list.List) *list.List {
 	if currToken.val == "(" {
 		// Starting a new list
 		subList := parenthesize(tokens, list.New())
-		tree.PushBack(subList)
+		tree.PushBack(Element{"list", subList})
 		return parenthesize(tokens, tree)
 	} else if currToken.val == ")" {
 		// Ending the current list
@@ -39,35 +43,35 @@ func parenthesize(tokens *list.List, tree *list.List) *list.List {
 		// We have some value in a list
 		switch currToken.token {
 		case STRING:
-			tree.PushBack(currToken.val[1:len(currToken.val)-1])
+			tree.PushBack(Element{"literal", currToken.val[1:len(currToken.val)-1]})
 		case NUMBER:
 			f, err := strconv.ParseFloat(currToken.val, 64)
 			if err != nil {
 				fmt.Println("Unable to convert number")
 				os.Exit(1)
 			}
-			tree.PushBack(f)
+			tree.PushBack(Element{"literal", f})
 		case BOOL:
 			b, err := strconv.ParseBool(currToken.val)
 			if err != nil {
 				fmt.Println("Unable to convert boolean")
 				os.Exit(1)
 			}
-			tree.PushBack(b)
+			tree.PushBack(Element{"literal", b})
 		default:
-			tree.PushBack(Identifier(currToken.val))
+			tree.PushBack(Element{"identifier", currToken.val})
 		}
 		return parenthesize(tokens, tree)
 	}
 }
 
-func makeListArray(l *list.List) []interface{} {
-	var arr []interface{}
+func makeListArray(l *list.List) []Element {
+	var arr []Element
 	for el := l.Front(); el != nil; el = el.Next() {
-		if subList, ok := el.Value.(*list.List); ok {
-			arr = append(arr, makeListArray(subList))
+		if elType := el.Value.(Element); elType.kind == "list" {
+			arr = append(arr, Element{"list", makeListArray(elType.val.(*list.List))})
 		} else {
-			arr = append(arr, el.Value)
+			arr = append(arr, el.Value.(Element))
 		}
 	}
 	return arr
@@ -78,26 +82,27 @@ func PrintAST(ast AST) {
 }
 
 func walkAndPrintTree(indent int, ast AST) {
-	var l []interface{}
+	var l []Element
 	l = ast
 	spacing := ""
 	for i := 0; i < indent; i++ {
 		spacing += "  "
 	}
 	for _, el := range l {
-		if listElem, ok := el.([]interface{}); ok {
+		if el.kind == "list" {
 			fmt.Printf("%s(\n", spacing)
-			walkAndPrintTree(indent+1, listElem)
+			walkAndPrintTree(indent+1, el.val.([]Element))
 			fmt.Printf("%s)\n", spacing)
-		} else if numElem, ok := el.(float64); ok {
-			fmt.Printf("%s[Number: %f]\n", spacing, numElem)
-		} else if idElem, ok := el.(Identifier); ok {
-			fmt.Printf("%s[Identifier: %s]\n", spacing, idElem)
-		} else if boolElem, ok := el.(bool); ok {
-			fmt.Printf("%s[Boolean: %t]\n", spacing, boolElem)
+		} else if el.kind == "identifier" {
+			fmt.Printf("%s[Identifier: %s]\n", spacing, el.val.(string))
+		} else if val, ok := el.val.(float64); ok {
+			fmt.Printf("%s[Number: %f]\n", spacing, val)
+		} else if val, ok := el.val.(bool); ok {
+			fmt.Printf("%s[Boolean: %t]\n", spacing, val)
+		} else if val, ok := el.val.(string); ok {
+			fmt.Printf("%s[String: \"%s\"]\n", spacing, val)
 		} else {
-			stringElem := el.(string)
-			fmt.Printf("%s[String: \"%s\"]\n", spacing, stringElem)
+			fmt.Printf("Unknown\n")
 		}
 	}
 }
