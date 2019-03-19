@@ -35,7 +35,7 @@ func interpret(input interface{}, ctx *Context) interface{} {
 		return interpret(input, &newContext)
 	} else if el, ok := input.(Element); ok && el.kind == "list" {
 		return interpretList(el.val.([]Element), ctx)
-	} else if el, ok := input.(Element); ok && el.kind == "identifier"{
+	} else if el, ok := input.(Element); ok && el.kind == "identifier" {
 		val := ctx.Get(el.val.(string))
 		if val != nil {
 			return val
@@ -43,6 +43,8 @@ func interpret(input interface{}, ctx *Context) interface{} {
 			fmt.Printf("Cannot find identifier: %s", el)
 			os.Exit(1)
 		}
+	} else if el, ok := input.(Element); ok && el.kind == "literal" {
+		return el.val
 	} else if el, ok := input.(float64); ok {
 		return el
 	} else if el, ok := input.(bool); ok {
@@ -133,6 +135,25 @@ func Init() {
 			} 
 			fmt.Printf("\n")
 			return nil
+		},
+		"let": func(args []Element, ctx *Context) interface{} {
+			tuples := args[0]
+			if tuples.kind != "list" {
+				fmt.Println("First argument to let is not a list of tuples")
+				os.Exit(1)
+			}
+			newContext := Context{make(map[string]interface{}), ctx}
+			for _, tuple := range tuples.val.([]Element) {
+				left := tuple.val.([]Element)[0]
+				right := tuple.val.([]Element)[1]
+				if left.kind != "identifier" {
+					fmt.Println("Left side of tuple is not identifier")
+					os.Exit(1)
+				}
+				id := left.val.(string)
+				newContext.scope[id] = interpret(right, ctx)
+			}
+			return interpret(args[1], &newContext)
 		},
 	}
 }
