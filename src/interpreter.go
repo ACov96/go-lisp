@@ -2,7 +2,6 @@ package main
 
 import "fmt"
 import "os"
-import "container/list"
 
 type Context struct {
 	scope map[string]interface{}
@@ -21,9 +20,9 @@ func (c Context) Get(x string) interface{} {
 
 func Interpret(ast AST) {
 	Init()
-	var l []interface{} 
+	var l []Element
 	l = ast
-	for _, el {
+	for _, el := range l {
 		interpret(el, nil)
 	}
 }
@@ -32,10 +31,10 @@ func interpret(input interface{}, ctx *Context) interface{} {
 	if ctx == nil {
 		newContext := Context{StandardLibrary, nil}
 		return interpret(input, &newContext)
-	} else if el, ok := input.([]interface{}); ok {
-		return interpretList(el.subTree, ctx)
-	} else if el, ok := Identifier(input); ok {
-		val := ctx.Get(el)
+	} else if el, ok := input.(Element); ok && el.kind == "list" {
+		return interpretList(el.val.([]Element), ctx)
+	} else if el, ok := input.(Element); ok && el.kind == "identifier"{
+		val := ctx.Get(el.val.(string))
 		if val != nil {
 			return val
 		} else {
@@ -57,29 +56,25 @@ func interpret(input interface{}, ctx *Context) interface{} {
 	return nil
 }
 
-func interpretList(ast AST, ctx *Context) interface{} {
-	var l []interface{}
-	var isIdentifier, isSpecial bool = false, false
-	var special interface{}
+func interpretList(l []Element, ctx *Context) interface{} {
 	var args []interface{}
-	l = ast
-	first, isIdentifier := Identifier(l[0])
-	if isIdentifier {
-		special, isSpecial = Special[first]
+	var isSpecial bool = false
+	var special interface{}
+	if l[0].kind == "identifier" {
+		special, isSpecial = Special[l[0].val.(string)]
 	}
 	if isSpecial && len(l) > 0 {
-		args = l[1:]
-		return special.(func([]interface{}, *Context) interface{})(args, ctx)
+		return special.(func([]Element, *Context) interface{})(l[1:], ctx)
 	} else {
 		var evaluatedList []interface{}
 		for _, el := range l {
-			evaluatedList = append(evaluatedList, interpret(el, ctx)))
+			evaluatedList = append(evaluatedList, interpret(el, ctx))
 		}
 		if f, ok := evaluatedList[0].(func([]interface{}, *Context) interface{}); ok {
 			args = evaluatedList[1:]
 			return f(args, ctx)
 		} else {
-			return AST(evaluatedList)
+			return evaluatedList
 		}	
 	}
 	
