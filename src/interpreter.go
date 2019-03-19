@@ -49,13 +49,11 @@ func interpret(input interface{}, ctx *Context) interface{} {
 		return el
 	} else if el, ok := input.(bool); ok {
 		return el
-	} else {
-		el, ok := input.(string)
-		if !ok {
-			fmt.Println("Unable to resolve value")
-			os.Exit(1)
-		}
+	} else if el, ok := input.(string); ok {
 		return el
+	} else {
+		fmt.Printf("Unable to resolve value: %T\n", input)
+		os.Exit(1)
 	}
 	return nil
 }
@@ -68,7 +66,11 @@ func interpretList(l []Element, ctx *Context) interface{} {
 		special, isSpecial = Special[l[0].val.(string)]
 	}
 	if isSpecial && len(l) > 0 {
-		return special.(func([]Element, *Context) interface{})(l[1:], ctx)
+		if f, isLambda := special.(func([]Element, *Context) func([]interface{}) interface{}); isLambda {
+			return f(l[1:], ctx)
+		} else {
+			return special.(func([]Element, *Context) interface{})(l[1:], ctx)
+		}
 	} else {
 		var evaluatedList []interface{}
 		for _, el := range l {
@@ -77,6 +79,9 @@ func interpretList(l []Element, ctx *Context) interface{} {
 		if f, ok := evaluatedList[0].(func([]interface{}, *Context) interface{}); ok {
 			args = evaluatedList[1:]
 			return f(args, ctx)
+		} else if f, ok := evaluatedList[0].(func([]interface{}) interface{}); ok {
+			args = evaluatedList[1:]
+			return f(args)
 		} else {
 			return evaluatedList
 		}	
@@ -176,6 +181,19 @@ func Init() {
 				newContext.scope[id] = interpret(right, ctx)
 			}
 			return interpret(args[1], &newContext)
+		},
+		"lambda": func(args []Element, ctx *Context) func([]interface{}) interface{} {
+			return func(runArgs []interface{}) interface{} {
+				lambdaContext := Context{make(map[string]interface{}), ctx}
+				for i, arg := range args[0].val.([]Element) {
+					if arg.kind != "identifier" {
+						fmt.Println("Argument in lambda function is not identifier")
+						os.Exit(1)
+					}
+					lambdaContext.scope[arg.val.(string)] = runArgs[i]
+				}
+				return interpret(args[1], &lambdaContext)
+			}
 		},
 	}
 }
